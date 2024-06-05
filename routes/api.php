@@ -32,9 +32,12 @@ Route::get('/testResponse', [ApiController::class, 'testApi']);
 
 Route::group(['middleware' => ['auth.sanctum.custom']], function () {
 
-    Route::get('/user/{id}', [ApiController::class, 'findUser']);
-    Route::post('/logout', [ApiController::class, 'logoutApi']);
-    // Route::get('/users', [ApiController::class, 'getUsers']);
-    Route::PUT('/updateUser/{id}', [ApiController::class, 'updateUserApi']);
+    // Route::get('/user/{id}', [ApiController::class, 'findUser']);
+    // Route::post('/logout', [ApiController::class, 'logoutApi']);
+    // // Route::get('/users', [ApiController::class, 'getUsers']);
+    // Route::PUT('/updateUser/{id}', [ApiController::class, 'updateUserApi']);
+    Route::get('/expenses', [ApiController::class, 'expenses']);
+    Route::post('/createExp', [ApiController::class, 'createExpense']);
+    Route::put('/updateExp/{id}', [ApiController::class, 'updateExpenses']);
 
 });

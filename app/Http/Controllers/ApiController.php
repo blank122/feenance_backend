@@ -322,8 +322,90 @@ class ApiController extends Controller
     {
         //update the users table
         //set null the users google_id, google_avatar, google_email,
+    }
 
 
+
+    public function createExpense(Request $request)
+    {
+        // Validate the request data
+        $request->validate([
+            'exp_name' => 'required|string',
+            'exp_type' => 'required|string',
+            'exp_price' => 'required|integer',
+        ]);
+
+        // Insert the validated data into the expenses table
+        $expenseID = DB::table('expenses')->insertGetId([
+            'exp_name' => $request->input('exp_name'),
+            'exp_type' => $request->input('exp_type'),
+            'exp_price' => $request->input('exp_price'),
+            'exp_status' => '1',
+            'created_at' => Carbon::now(), // Optionally add timestamps
+            'updated_at' => Carbon::now(),
+        ]);
+
+
+        // $expense = DB::table('expenses')->where('id', $expenseID)->get();
+
+        // Optionally, return a response or redirect
+        return response()->json([
+            'message' => 'Expense created successfully',
+            'expense' => $expenseID
+        ], 201);
+    }
+
+    public function expenses()
+    {
+        $expenses = DB::table('expenses')->select([
+            'expenses.*'
+        ])->get();
+
+        return response()->json([
+            'message' => 'Fetched Expenses Successfully',
+            'expense' => $expenses
+        ], 200);
+    }
+
+    public function updateExpenses(Request $request, $id)
+    {
+        $exp_id = $id;
+        $exp_name = $request->exp_name;
+        $exp_type = $request->exp_type;
+        $exp_price = $request->exp_price;
+
+
+
+        $expense = DB::table('expenses')
+            ->where('exp_id', '=', $exp_id)
+            ->first();
+
+        if (!$expense) {
+            return response()->json(['message' => 'Expense with that ID not found'], 400);
+        } else {
+            $updatedExpense = DB::table('expenses')
+                ->where('exp_id', '=', $id)
+                ->update(
+                    array(
+                        'exp_name' => $exp_name,
+                        'exp_type' => $exp_type,
+                        'exp_price' => $exp_price,
+                        'updated_at' => Carbon::now(),
+                        // 'usr_is_admin' => '1',
+                    )
+                );
+
+            // Retrieve the updated expense
+            $fetchExpense = DB::table('expenses')
+                ->where('exp_id', '=', $exp_id)
+                ->first();
+
+            return response()->json([
+                'response' => 200,
+                'message' => 'Expenses has been updated successfully.',
+                'expense' => $fetchExpense
+            ]);
+        }
     }
 
 
