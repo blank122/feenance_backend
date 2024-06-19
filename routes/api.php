@@ -44,6 +44,9 @@ Route::group(['middleware' => ['auth.sanctum.custom']], function () {
 
     //link google account
     Route::post('/linkAccount', [ApiController::class, 'linkAccount']);
+    Route::post('/unlinkAccount', [ApiController::class, 'UnlinkedAccount']);
+
+    Route::post('/logout', [ApiController::class, 'logoutApi']);
 
 
 });

@@ -44,7 +44,6 @@ class ApiController extends Controller
     }
 
 
-
     public function logoutApi(Request $request)
     {
         $token = $request->bearerToken();
@@ -212,13 +211,6 @@ class ApiController extends Controller
         // Check if the user exists and google_id is not empty
         $user = DB::table('users')->where('google_id', $request->google_id)->first();
 
-        if ($request->hasFile('google_avatar')) {
-            $googleAvatarPath = $request->file('usr_image_path');
-            $googleAvatarName = uniqid() . '.' . $googleAvatarPath->getClientOriginalExtension();
-            $googleAvatarPath->move(public_path('images'), $googleAvatarName);
-        }
-
-
         if ($user) {
             // If google_id is already present, just generate a token
             if (!empty($user->google_id)) {
@@ -228,6 +220,8 @@ class ApiController extends Controller
                     'message' => 'User already exists. Token generated.',
                     'user' => $user,
                     'token' => $token,
+                    'usr_id' => $user->usr_id,
+
                 ], 200);
             }
 
@@ -235,8 +229,8 @@ class ApiController extends Controller
             DB::table('users')->where('google_id', $request->google_id)->update([
                 'google_email' => $request->google_email,
                 'google_name' => $request->google_name,
-                'google_avatar' => $googleAvatarName,
-                'updated_at' => now(),
+                'google_avatar' => $request->google_avatar,
+                'usr_date_modified' => now(),
             ]);
 
             // Generate a token for the updated user
@@ -246,6 +240,7 @@ class ApiController extends Controller
                 'message' => 'User details updated successfully',
                 'user' => DB::table('users')->where('usr_id', $user->usr_id)->first(),
                 'token' => $token,
+                'usr_id' => $user->usr_id,
             ], 200);
         } else {
             // Generate a temporary password
@@ -265,7 +260,7 @@ class ApiController extends Controller
                 'google_id' => $request->google_id,
                 'google_email' => $request->google_email,
                 'google_name' => $request->google_name,
-                'google_avatar' => $googleAvatarName,
+                'google_avatar' => $request->google_avatar,
                 'role_id' => '4',
                 'usr_active' => '1',
                 'usr_date_modified' => Carbon::now()
@@ -279,6 +274,7 @@ class ApiController extends Controller
                 'message' => 'User details saved successfully',
                 'user' => DB::table('users')->where('usr_id', $userId)->first(),
                 'token' => $token,
+                'usr_id' => $userId,
                 'temporary_password' => $temporaryPassword,
             ], 200);
         }
@@ -289,15 +285,13 @@ class ApiController extends Controller
     {
         // Validate the incoming request data
         $request->validate([
-            'google_id' => 'required|string|unique:users,google_id',
-            'google_email' => 'required|string|email|unique:users,google_email',
-            'google_name' => 'required|string',
-            'user_id' => 'required|integer|exists:users,id'
+            'google_id' => 'string|unique:users,google_id',
+            'google_email' => 'string|email|unique:users,google_email',
+            'google_name' => 'string',
         ]);
 
-        // Retrieve the user
-        $user = DB::table('users')->where('id', $request->user_id)->first();
-
+        // check if the user is already linked his account
+        $user = DB::table('users')->where('google_id', $request->google_id)->first();
         // Check if the user's Google account is already linked
         if ($user->google_id || $user->google_email || $user->google_name) {
             return response()->json([
@@ -306,11 +300,11 @@ class ApiController extends Controller
         }
 
         // Update the user's Google account information
-        DB::table('users')->where('id', $request->user_id)->update([
+        DB::table('users')->where('usr_id', $request->usr_id)->update([
             'google_id' => $request->google_id,
             'google_email' => $request->google_email,
             'google_name' => $request->google_name,
-            'updated_at' => now(),
+            'usr_date_modified' => now(),
         ]);
 
         // Generate a token for the user
@@ -327,50 +321,47 @@ class ApiController extends Controller
 
     public function UnlinkedAccount(Request $request)
     {
-        //update the users table
-        //set null the users google_id, google_avatar, google_email,
-
         // Validate the incoming request data
         $request->validate([
-            'google_id' => 'required|string|unique:users,google_id',
-            'google_email' => 'required|string|email|unique:users,google_email',
+            'google_id' => 'required|string',
+            'google_email' => 'required|string|email',
             'google_name' => 'required|string',
             'google_avatar' => 'required|string',
-            'user_id' => 'required|integer|exists:users,id'
+            'usr_id' => 'required', // Ensure usr_id is validated as well
         ]);
 
         // Retrieve the user
-        $user = DB::table('users')->where('id', $request->user_id)->first();
+        $user = DB::table('users')->where('google_id', $request->google_id)->first();
+        $usrID = DB::table('users')->where('usr_id', $request->usr_id)->first();
 
-        // Check if the user's Google account is already linked
-        if ($user->google_id || $user->google_email || $user->google_name) {
+        // Ensure user and usrID are retrieved correctly
+        if ($user && $usrID) {
+            // Check if the user's Google account is already linked
+            if ($user->google_id !== null || $user->google_email !== null || $user->google_name !== null) {
+                // Update the user's Google account information
+                DB::table('users')
+                    ->where('usr_id', '=', $usrID->usr_id)
+                    ->update([
+                        'google_id' => null,
+                        'google_email' => null,
+                        'google_name' => null,
+                        'google_avatar' => null,
+                        'usr_date_modified' => Carbon::now(),
+                    ]);
 
-            // Update the user's Google account information
-            DB::table('users')->where('id', $request->user_id)->update([
-                'google_id' => null,
-                'google_email' => null,
-                'google_name' => null,
-                'updated_at' => now(),
-            ]);
-
-            // Generate a token for the user
-            // $token = $this->generateToken($request->user_id);
-
-            // Return the response with the token
-            return response()->json([
-                'message' => 'User account has been unlinked',
-                'user' => $user,
-                // 'token' => $token
-            ], 200);
-
+                return response()->json([
+                    'message' => 'User account has been unlinked',
+                ], 200);
+            } else {
+                return response()->json([
+                    'message' => 'Account is not linked to Google',
+                ], 400);
+            }
         } else {
             return response()->json([
-                'message' => 'Something went wrong',
-            ], 400);
+                'message' => 'User not found',
+            ], 404);
         }
-
-
-
     }
 
 
