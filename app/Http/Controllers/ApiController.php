@@ -34,7 +34,7 @@ class ApiController extends Controller
 
         return response()->json([
             'message' => 'Login successfully',
-            'Personal Access Token' => $token,
+            'token' => $token,
             'status' => 200,
             'usr_id' => $user->usr_id,
             'email' => $usr_email,
@@ -212,6 +212,13 @@ class ApiController extends Controller
         // Check if the user exists and google_id is not empty
         $user = DB::table('users')->where('google_id', $request->google_id)->first();
 
+        if ($request->hasFile('google_avatar')) {
+            $googleAvatarPath = $request->file('usr_image_path');
+            $googleAvatarName = uniqid() . '.' . $googleAvatarPath->getClientOriginalExtension();
+            $googleAvatarPath->move(public_path('images'), $googleAvatarName);
+        }
+
+
         if ($user) {
             // If google_id is already present, just generate a token
             if (!empty($user->google_id)) {
@@ -228,7 +235,7 @@ class ApiController extends Controller
             DB::table('users')->where('google_id', $request->google_id)->update([
                 'google_email' => $request->google_email,
                 'google_name' => $request->google_name,
-                'google_avatar' => $request->google_avatar,
+                'google_avatar' => $googleAvatarName,
                 'updated_at' => now(),
             ]);
 
@@ -258,7 +265,7 @@ class ApiController extends Controller
                 'google_id' => $request->google_id,
                 'google_email' => $request->google_email,
                 'google_name' => $request->google_name,
-                'google_avatar' => $request->google_avatar,
+                'google_avatar' => $googleAvatarName,
                 'role_id' => '4',
                 'usr_active' => '1',
                 'usr_date_modified' => Carbon::now()
@@ -307,21 +314,63 @@ class ApiController extends Controller
         ]);
 
         // Generate a token for the user
-        $token = $this->generateToken($request->user_id);
+        // $token = $this->generateToken($request->user_id);
 
         // Return the response with the token
         return response()->json([
             'message' => 'User account has been linked',
             'user' => $user,
-            'token' => $token
+            // 'token' => $token
         ], 200);
     }
 
 
-    public function UnlinkedAccount()
+    public function UnlinkedAccount(Request $request)
     {
         //update the users table
         //set null the users google_id, google_avatar, google_email,
+
+        // Validate the incoming request data
+        $request->validate([
+            'google_id' => 'required|string|unique:users,google_id',
+            'google_email' => 'required|string|email|unique:users,google_email',
+            'google_name' => 'required|string',
+            'google_avatar' => 'required|string',
+            'user_id' => 'required|integer|exists:users,id'
+        ]);
+
+        // Retrieve the user
+        $user = DB::table('users')->where('id', $request->user_id)->first();
+
+        // Check if the user's Google account is already linked
+        if ($user->google_id || $user->google_email || $user->google_name) {
+
+            // Update the user's Google account information
+            DB::table('users')->where('id', $request->user_id)->update([
+                'google_id' => null,
+                'google_email' => null,
+                'google_name' => null,
+                'updated_at' => now(),
+            ]);
+
+            // Generate a token for the user
+            // $token = $this->generateToken($request->user_id);
+
+            // Return the response with the token
+            return response()->json([
+                'message' => 'User account has been unlinked',
+                'user' => $user,
+                // 'token' => $token
+            ], 200);
+
+        } else {
+            return response()->json([
+                'message' => 'Something went wrong',
+            ], 400);
+        }
+
+
+
     }
 
 
@@ -357,15 +406,34 @@ class ApiController extends Controller
 
     public function expenses()
     {
-        $expenses = DB::table('expenses')->select([
-            'expenses.*'
-        ])->get();
+        $expenses = DB::table('expenses')
+            ->orderBy('exp_id', 'desc')
+            ->get();
 
         return response()->json([
+            'expense' => $expenses,
             'message' => 'Fetched Expenses Successfully',
-            'expense' => $expenses
+
         ], 200);
     }
+
+    // public function weeklyExpenses()
+    // {
+    //     // Get the start and end dates of the current week
+    //     $startDate = now()->startOfWeek();
+    //     $endDate = now()->endOfWeek();
+
+    //     // Query to get total expenses within the current week
+    //     $totalExpenses = DB::table('expenses')
+    //         ->whereBetween('created_at', [$startDate, $endDate])
+    //         ->sum('exp_price');
+    //     // $totalExpenses = Expense::whereBetween('created_at', [$startDate, $endDate])->sum('exp_price');
+
+    //     return response()->json([
+    //         'data' => $totalExpenses,
+    //         'message' => 'Fetched Successfully',
+    //     ], 200);
+    // }
 
     public function updateExpenses(Request $request, $id)
     {
@@ -383,7 +451,7 @@ class ApiController extends Controller
         if (!$expense) {
             return response()->json(['message' => 'Expense with that ID not found'], 400);
         } else {
-            $updatedExpense = DB::table('expenses')
+            DB::table('expenses')
                 ->where('exp_id', '=', $id)
                 ->update(
                     array(

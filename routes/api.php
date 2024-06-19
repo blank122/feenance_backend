@@ -36,8 +36,14 @@ Route::group(['middleware' => ['auth.sanctum.custom']], function () {
     // Route::post('/logout', [ApiController::class, 'logoutApi']);
     // // Route::get('/users', [ApiController::class, 'getUsers']);
     // Route::PUT('/updateUser/{id}', [ApiController::class, 'updateUserApi']);
+    // Route::get('/expenses', [ApiController::class, 'expenses']);
+    // Route::get('/weeklyExp', [ApiController::class, 'weeklyExpenses']);
     Route::get('/expenses', [ApiController::class, 'expenses']);
     Route::post('/createExp', [ApiController::class, 'createExpense']);
     Route::put('/updateExp/{id}', [ApiController::class, 'updateExpenses']);
+
+    //link google account
+    Route::post('/linkAccount', [ApiController::class, 'linkAccount']);
+
 
 });
