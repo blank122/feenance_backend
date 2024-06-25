@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Log;
 use Hash;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
 
 class ApiController extends Controller
 {
@@ -288,34 +290,46 @@ class ApiController extends Controller
             'google_id' => 'string|unique:users,google_id',
             'google_email' => 'string|email|unique:users,google_email',
             'google_name' => 'string',
+            'google_avatar' => 'string',
         ]);
 
         // check if the user is already linked his account
         $user = DB::table('users')->where('google_id', $request->google_id)->first();
-        // Check if the user's Google account is already linked
-        if ($user->google_id || $user->google_email || $user->google_name) {
+
+        //trap the possible errors in the code
+        try {
+            if ($user) {
+                return response()->json([
+                    'message' => 'This account is already linked to a Google account',
+                ], 400);
+            } else {
+                DB::table('users')->where('usr_id', $request->usr_id)->update([
+                    'google_id' => $request->google_id,
+                    'google_email' => $request->google_email,
+                    'google_name' => $request->google_name,
+                    'google_avatar' => $request->google_avatar,
+                    'usr_date_modified' => now(),
+                ]);
+
+                return response()->json([
+                    'message' => 'User account has been linked',
+                    'user' => $user,
+                    // 'token' => $token
+                ], 200);
+            }
+        } catch (\Exception $e) {
             return response()->json([
-                'message' => 'This account is already linked to a Google account',
-            ], 400);
+                'message' => $e,
+            ], 500);
         }
 
-        // Update the user's Google account information
-        DB::table('users')->where('usr_id', $request->usr_id)->update([
-            'google_id' => $request->google_id,
-            'google_email' => $request->google_email,
-            'google_name' => $request->google_name,
-            'usr_date_modified' => now(),
-        ]);
+        // Check if the user's Google account is already linked
+        // if ($user->google_id || $user->google_email || $user->google_name) {
+        //     return response()->json([
+        //         'message' => 'This account is already linked to a Google account',
+        //     ], 400);
+        // }
 
-        // Generate a token for the user
-        // $token = $this->generateToken($request->user_id);
-
-        // Return the response with the token
-        return response()->json([
-            'message' => 'User account has been linked',
-            'user' => $user,
-            // 'token' => $token
-        ], 200);
     }
 
 
@@ -465,6 +479,64 @@ class ApiController extends Controller
                 'expense' => $fetchExpense
             ]);
         }
+    }
+
+    public function generateQRCode()
+    {
+        $jsonData = [
+            'name' => 'John Doe',
+            'email' => 'john.doe@example.com',
+            'phone' => '123-456-7890'
+        ];
+
+        $jsonString = json_encode($jsonData);
+
+        $qrCode = new QrCode($jsonString);
+        $qrCode->setSize(400);
+
+        $writer = new PngWriter();
+        $qrCodeImage = $writer->write($qrCode);
+
+        $qrCodePath = $this->saveQRCode($qrCodeImage);
+
+        if ($qrCodePath === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save QR code',
+            ], 500);
+        } else {
+            return response($qrCodePath);
+        }
+    }
+
+    private function saveQRCode($qrCodeImage)
+    {
+        $directory = public_path('qrcodesfiles');
+        if (!is_dir($directory)) {
+            if (!mkdir($directory, 0755, true)) {
+                Log::error("Failed to create directory: $directory");
+                return false;
+            }
+        }
+
+        $path = $directory . DIRECTORY_SEPARATOR . uniqid() . '.png';
+
+        // Ensure the directory is writable
+        if (!is_writable($directory)) {
+            Log::error("Directory $directory is not writable");
+            return false;
+        }
+
+        // Save QR code to file
+        try {
+            $qrCodeImage->saveToFile($path);
+        } catch (\Exception $e) {
+            Log::error("Failed to save QR code to: $path");
+            return false;
+        }
+
+        Log::info("QR code saved successfully to: $path");
+        return $path;
     }
 
 

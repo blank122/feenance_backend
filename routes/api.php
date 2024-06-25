@@ -22,14 +22,19 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('/apitest', function () {
     return "Hello World!";
 });
-Route::get('/dd', [ApiController::class, 'checktable']);
+
+//public api
 
 Route::post('/login', [ApiController::class, 'loginApi']);
 Route::post('/saveGoogleInfo', [ApiController::class, 'storeGoogleInfoAPI']);
 Route::get('/users', [ApiController::class, 'getUsers']);
 // Route::get('/users/{id}', [ApiController::class, 'findUser']);
 Route::get('/testResponse', [ApiController::class, 'testApi']);
+Route::get('/expenses', [ApiController::class, 'expenses']);
+Route::get('/qrcode', [ApiController::class, 'generateQRCode']);
 
+
+//protected api routes
 Route::group(['middleware' => ['auth.sanctum.custom']], function () {
 
     // Route::get('/user/{id}', [ApiController::class, 'findUser']);
@@ -38,7 +43,7 @@ Route::group(['middleware' => ['auth.sanctum.custom']], function () {
     // Route::PUT('/updateUser/{id}', [ApiController::class, 'updateUserApi']);
     // Route::get('/expenses', [ApiController::class, 'expenses']);
     // Route::get('/weeklyExp', [ApiController::class, 'weeklyExpenses']);
-    Route::get('/expenses', [ApiController::class, 'expenses']);
+    // Route::get('/expenses', [ApiController::class, 'expenses']);
     Route::post('/createExp', [ApiController::class, 'createExpense']);
     Route::put('/updateExp/{id}', [ApiController::class, 'updateExpenses']);
 

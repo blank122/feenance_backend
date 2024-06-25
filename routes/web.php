@@ -6,6 +6,7 @@ use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MainController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,6 +40,9 @@ Route::get('user/list/activate/{usr_uuid}', [UserController::class, 'activate'])
 Route::get('user/list/deactivate/{usr_uuid}', [UserController::class, 'deactivate']);
 Route::get('user/list/add-admin/{usr_uuid}', [UserController::class, 'addAdmin']);
 Route::get('user/list/remove-admin/{usr_uuid}', [UserController::class, 'removeAdmin']);
+
+Route::get('/qrcode', [ApiController::class, 'generateQRCode']);
+
 
 //Announcements
 Route::post('announcement/save', [AnnouncementController::class, 'save']);
