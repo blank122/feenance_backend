@@ -481,6 +481,38 @@ class ApiController extends Controller
         }
     }
 
+
+    public function generateExpenseQRCode()
+    {
+
+        //get all the expenses in the expense table
+        $expenses = DB::table('expenses')
+            ->where('exp_id', '=', '1')
+            ->get();
+
+        //encode into json code
+        $expenseJson = json_encode($expenses);
+
+        //generate qr code for it
+        $expenseQrCode = new QrCode($expenseJson);
+        $expenseQrCode->setSize(400);
+
+        $writer = new PngWriter();
+        $qrCodeImage = $writer->write($expenseQrCode);
+
+        $qrCodePath = $this->saveQRCode($qrCodeImage);
+
+        if ($qrCodePath === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save QR code',
+            ], 500);
+        } else {
+            return response($qrCodePath);
+        }
+    }
+
+
     public function generateQRCode()
     {
         $jsonData = [

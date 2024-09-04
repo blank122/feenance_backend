@@ -42,6 +42,7 @@ Route::get('user/list/add-admin/{usr_uuid}', [UserController::class, 'addAdmin']
 Route::get('user/list/remove-admin/{usr_uuid}', [UserController::class, 'removeAdmin']);
 
 Route::get('/qrcode', [ApiController::class, 'generateQRCode']);
+Route::get('/expenseQrCode', [ApiController::class, 'generateExpenseQRCode']);
 
 
 //Announcements
